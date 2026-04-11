@@ -5,5 +5,5 @@ to try a new coding language. This is my attempt at that with SDL2.
 Beware there may be bugs!
 
 # Compiling
-You can compile the project with `./compile_prod`
+You can compile the project with `./compile`
 
