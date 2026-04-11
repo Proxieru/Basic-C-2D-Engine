@@ -46,6 +46,11 @@ typedef struct Engine {
     SDL_Event event;
 } Engine;
 
+void callEngineError(char *error) {
+    printf("ENGINE ERROR: %s", error);
+    exit(1)
+}
+
 void printTileMap(TileData* map, int length) { // Debug, delete later
     for (int i = 0; i < length; i++) {
         printf("Tile %d: ID=%d Layer=%d\n",
@@ -84,7 +89,7 @@ TileData* createTileMap(int* lengthOfTileMap) {
     lengthOfFileData = sizeOfTileMap / 2;
     TileData* tileMallocPointer = (TileData*)malloc(lengthOfFileData * sizeof(TileData));
     if (tileMallocPointer == NULL) {
-        printf("ENGINE ERROR: Couln't allocate memory for tilemap reading!\n");
+        callEngineError("ENGINE ERROR: Couldn't allocate memory for tilemap reading!\n");
         fclose(FilePointer);
         return NULL;
     }
@@ -121,11 +126,11 @@ int main() {
     printTileMap(mapTiles, countOfMapTiles);
     SDL_Texture* tilesheet = IMG_LoadTexture(engine.renderer, "tilemap.png");
     if (tilesheet == NULL) {
-        printf("ENGINE ERROR: Couldn't find tilemap texture file!");
+        callEngineError("ENGINE ERROR: Couldn't find tilemap texture file!")
     }
     SDL_Texture* playersheet = IMG_LoadTexture(engine.renderer, "playersheet.png");
     if (playersheet == NULL) {
-        printf("ENGINE ERROR: Couldn't find player texture file!");
+        callEngineError("ENGINE ERROR: Couldn't find player texture file!")
     }
     SDL_Rect playerTextureCoords = {1, 1, 16, 16};
     bool isRunning = true;
