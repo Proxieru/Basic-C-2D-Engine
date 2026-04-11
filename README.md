@@ -1,2 +1,9 @@
 # Basic-C-2D-Engine
-I'm learning how to code, and this is my attempt to make a basic engine for a 2D game with SDL2 in C.
+I've been working with python for a while and wanted
+to try a new coding language. This is my attempt at that with SDL2.
+
+Beware there may be bugs!
+
+# Compiling
+You can compile the project with `./compile_prod`
+
