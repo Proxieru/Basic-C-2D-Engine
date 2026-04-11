@@ -21,6 +21,8 @@ int tileWidth = 0;
 int tileIndex = 0; 
 int tileSize = 16;
 int countOfMapTiles = 0;
+int entityData[100];
+int entityDataIndex = 0;
 bool allowMove = true;
 
 enum TileType {
@@ -40,15 +42,36 @@ typedef struct tileProperties {
     int Layer;
 } TileData;
 
+typedef struct entityProperties {
+    int entityID;
+    int Health;
+} Entity;
+
+
 typedef struct Engine {
     SDL_Window* window;
     SDL_Renderer *renderer;
     SDL_Event event;
 } Engine;
 
-void callEngineError(char *error) {
-        printf("ENGINE ERROR: %s", error);
-        exit(1);
+void createEntity(int entityID, int health, int x, int y) {
+    printf("ENGINE: Attempting to create entity...\n");
+    if (entityDataIndex > 100) {
+        printf("ENGINE: Tried creating a entity after limit is full!\n");
+    }
+    entityData[entityDataIndex] = entityID;
+    entityData[entityDataIndex + 1] = health;
+    entityData[entityDataIndex + 2] = x;
+    entityData[entityDataIndex + 3] = y;
+    entityDataIndex += 4;
+    printf("ENGINE: Created new entity! Entity Index: %d\n", entityDataIndex);
+}
+
+void callEngineError(const char *error) {
+        fprintf(stderr, "%s\n", error);
+        fflush(stderr);
+        //SDL_Quit();
+        //exit(1);
 }
 
 void printTileMap(TileData* map, int length) { // Debug, delete later
@@ -119,11 +142,12 @@ Engine EngineStart() {
 int main() {
     printf("ENGINE: Starting..\n");
     Engine engine = EngineStart(); // grabbing SDL props
-    callEngineError("Test");
     Player player = {0};
     player.playerX = 10;
     player.playerY = 10;
     TileData* mapTiles = createTileMap(&countOfMapTiles);
+    createEntity(1, 100, 0, 0);
+    createEntity(2, 100, 16, 16);
     printTileMap(mapTiles, countOfMapTiles);
     SDL_Texture* tilesheet = IMG_LoadTexture(engine.renderer, "tilemap.png");
     if (tilesheet == NULL) {
@@ -132,6 +156,10 @@ int main() {
     SDL_Texture* playersheet = IMG_LoadTexture(engine.renderer, "playersheet.png");
     if (playersheet == NULL) {
         callEngineError("ENGINE ERROR: Couldn't find player texture file!");
+    }
+    SDL_Texture* enemytilesheet = IMG_LoadTexture(engine.renderer, "enemytilesheet.png");
+    if (enemytilesheet == NULL) {
+        callEngineError("ENGINE ERROR: Couldn't find enemy texture file!");
     }
     SDL_Rect playerTextureCoords = {1, 1, 16, 16};
     bool isRunning = true;
@@ -181,6 +209,11 @@ int main() {
             SDL_Rect tileTextureCoords = {tiles.TileID * tileSize, 0, 16, 16};
             SDL_Rect physicalTileTextureCoords = {tileX * tileSize, tileY*16, 16, 16};
             SDL_RenderCopy(engine.renderer, tilesheet, &tileTextureCoords, &physicalTileTextureCoords);
+        }
+        for (int i = 0; i < entityDataIndex; i += 4) {
+            SDL_Rect entityTextureCoords = {entityData[i] * tileSize, 16, 16, 16};
+            SDL_Rect entityPhysicalTextureCoords = {entityData[i + 2], entityData[i + 3], 16, 16};
+            SDL_RenderCopy(engine.renderer, enemytilesheet, &entityTextureCoords, &entityPhysicalTextureCoords);
         }
         SDL_RenderCopy(engine.renderer, playersheet, &playerTextureCoords, &physicalPlayerCoords);
         SDL_RenderPresent(engine.renderer);
