@@ -21,8 +21,8 @@ int tileWidth = 0;
 int tileIndex = 0; 
 int tileSize = 16;
 int countOfMapTiles = 0;
-int entityData[100];
 int entityDataIndex = 0;
+int devCounterGenerate = 0;
 bool allowMove = true;
 
 enum TileType {
@@ -45,8 +45,11 @@ typedef struct tileProperties {
 typedef struct entityProperties {
     int entityID;
     int Health;
+    int x, y;
+    int data;
 } Entity;
 
+Entity entityData[100];
 
 typedef struct Engine {
     SDL_Window* window;
@@ -56,14 +59,16 @@ typedef struct Engine {
 
 void createEntity(int entityID, int health, int x, int y) {
     printf("ENGINE: Attempting to create entity...\n");
-    if (entityDataIndex > 100) {
+    if (entityDataIndex > 96) {
         printf("ENGINE: Tried creating a entity after limit is full!\n");
+        return;
     }
-    entityData[entityDataIndex] = entityID;
-    entityData[entityDataIndex + 1] = health;
-    entityData[entityDataIndex + 2] = x;
-    entityData[entityDataIndex + 3] = y;
-    entityDataIndex += 4;
+    Entity entity;
+    entityData[entityDataIndex].entityID = entityID;
+    entityData[entityDataIndex].Health = health;
+    entityData[entityDataIndex].x = x;
+    entityData[entityDataIndex].y = y;
+    entityDataIndex++;
     printf("ENGINE: Created new entity! Entity Index: %d\n", entityDataIndex);
 }
 
@@ -120,7 +125,7 @@ TileData* createTileMap(int* lengthOfTileMap) {
     while (lengthOfFileData != tileIndex) {
         fread(&tileDataBuffer, sizeof(uint8_t), 1, FilePointer);
         tileMallocPointer[tileIndex].TileID = tileDataBuffer;
-        fread(&tileDataBuffer, sizeof(uint8_t), 1, FilePointer);
+        fread(&layerDataBuffer, sizeof(uint8_t), 1, FilePointer);
         tileMallocPointer[tileIndex].Layer = layerDataBuffer;
         countOfMapTiles++;
         tileIndex++;
@@ -129,8 +134,8 @@ TileData* createTileMap(int* lengthOfTileMap) {
     return tileMallocPointer;
 }
 
-Engine EngineStart() {
-    Engine engine; // lotsa saying engine here!
+Engine EngineStart() { // Returns engine object for interacting with the window or renderer
+    Engine engine; 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("ENGINE ERROR: SDL Failed on start: %s\n", SDL_GetError());
     }
@@ -146,8 +151,7 @@ int main() {
     player.playerX = 10;
     player.playerY = 10;
     TileData* mapTiles = createTileMap(&countOfMapTiles);
-    createEntity(1, 100, 0, 0);
-    createEntity(2, 100, 16, 16);
+    createEntity(1, 100, 32, 32);
     printTileMap(mapTiles, countOfMapTiles);
     SDL_Texture* tilesheet = IMG_LoadTexture(engine.renderer, "tilemap.png");
     if (tilesheet == NULL) {
@@ -161,7 +165,7 @@ int main() {
     if (enemytilesheet == NULL) {
         callEngineError("ENGINE ERROR: Couldn't find enemy texture file!");
     }
-    SDL_Rect playerTextureCoords = {1, 1, 16, 16};
+    SDL_Rect playerTextureCoords = {1, 1, 16, 32};
     bool isRunning = true;
     while (isRunning) {
         SDL_SetRenderDrawColor(engine.renderer, 0, 0, 0, 255);
@@ -186,7 +190,7 @@ int main() {
             playerDirX++;
             normalizePlayerDirection(&playerDirX, &playerDirY);
         }
-        if (playerDirX == 0 && playerDirY == 0) {
+        if (playerDirX == 0 && playerDirY == 0) { // Move into math funcs
             player.velX *= 1.0f / (1.0f + playerFriction * delta);
             player.velY *= 1.0f / (1.0f + playerFriction * delta);
         }
@@ -197,22 +201,31 @@ int main() {
             player.velX *= scale;
             player.velY *= scale;
         }
-        SDL_Rect physicalPlayerCoords = {player.playerX, player.playerY, 16, 16};
+        SDL_Rect physicalPlayerCoords = {player.playerX, player.playerY, 16, 32};
         player.velX += playerDirX * playerAcceleration * delta;
         player.velY += playerDirY * playerAcceleration * delta;
         player.playerX += player.velX * delta;
         player.playerY += player.velY * delta;
         for (int i = 0; i < lengthOfFileData; i++) {
             TileData tiles = mapTiles[i];
+            TileData nextTiles = mapTiles[i+1];
             int tileX = i % 20;
             int tileY = i / 20;
             SDL_Rect tileTextureCoords = {tiles.TileID * tileSize, 0, 16, 16};
             SDL_Rect physicalTileTextureCoords = {tileX * tileSize, tileY*16, 16, 16};
-            SDL_RenderCopy(engine.renderer, tilesheet, &tileTextureCoords, &physicalTileTextureCoords);
+            if (tiles.TileID == 3 && nextTiles.Layer == 1) {
+                SDL_RenderCopy(engine.renderer, tilesheet, &tileTextureCoords, &physicalTileTextureCoords);
+                SDL_Rect tileTextureCoords = {nextTiles.TileID * tileSize, 0, 16, 16};
+                SDL_Rect physicalTileTextureCoords = {tileX * tileSize, tileY*16, 16, 16};
+                SDL_RenderCopy(engine.renderer, tilesheet, &tileTextureCoords, &physicalTileTextureCoords);
+            } else {
+                SDL_RenderCopy(engine.renderer, tilesheet, &tileTextureCoords, &physicalTileTextureCoords);
+            }
         }
         for (int i = 0; i < entityDataIndex; i += 4) {
-            SDL_Rect entityTextureCoords = {entityData[i] * tileSize, 16, 16, 16};
-            SDL_Rect entityPhysicalTextureCoords = {entityData[i + 2], entityData[i + 3], 16, 16};
+            Entity entity = entityData[i];
+            SDL_Rect entityTextureCoords = {entity.entityID * tileSize, 16, 16, 16};
+            SDL_Rect entityPhysicalTextureCoords = {entity.x, entity.y, 16, 16};
             SDL_RenderCopy(engine.renderer, enemytilesheet, &entityTextureCoords, &entityPhysicalTextureCoords);
         }
         SDL_RenderCopy(engine.renderer, playersheet, &playerTextureCoords, &physicalPlayerCoords);
