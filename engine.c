@@ -13,16 +13,16 @@ float maxPlayerSpeed = 200.0f;
 float playerFriction = 20.0f;
 float playerDirX = 0;
 float playerDirY = 0;
-int nextX = 16;
-int nextY = 16;
 int lengthOfFileData = 0;
 int tileHeight = 0;
-int tileWidth = 0;
+int tileBitAmounts = 2;
+int tileWidth = 40;
 int tileIndex = 0; 
 int tileSize = 16;
 int countOfMapTiles = 0;
 int entityDataIndex = 0;
 int devCounterGenerate = 0;
+int zoomTileSize = 0;
 bool allowMove = true;
 
 enum TileType {
@@ -33,7 +33,7 @@ enum TileType {
 };
 
 typedef struct playerProperties {
-    float playerX, playerY;
+    float x, y; // why did I have this as playerX and y previously??
     float velX, velY;
 } Player;
 
@@ -49,6 +49,11 @@ typedef struct entityProperties {
     int data;
 } Entity;
 
+typedef struct cameraProperties {
+    int x, y;
+    int zoom;
+} Camera;
+
 Entity entityData[100];
 
 typedef struct Engine {
@@ -57,9 +62,17 @@ typedef struct Engine {
     SDL_Event event;
 } Engine;
 
+bool isTileSolid(int tileID) {
+    if (tileID == water || tileID == rock) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 void createEntity(int entityID, int health, int x, int y) {
     printf("ENGINE: Attempting to create entity...\n");
-    if (entityDataIndex > 96) {
+    if (entityDataIndex > 100) {
         printf("ENGINE: Tried creating a entity after limit is full!\n");
         return;
     }
@@ -75,8 +88,8 @@ void createEntity(int entityID, int health, int x, int y) {
 void callEngineError(const char *error) {
         fprintf(stderr, "%s\n", error);
         fflush(stderr);
-        //SDL_Quit();
-        //exit(1);
+        SDL_Quit(); // Forgot to make engine exit on error, whoops!
+        exit(1);
 }
 
 void printTileMap(TileData* map, int length) { // Debug, delete later
@@ -114,7 +127,7 @@ TileData* createTileMap(int* lengthOfTileMap) {
     fseek(FilePointer, 0L, SEEK_END);
     int sizeOfTileMap = ftell(FilePointer); // grabbing file size
     fseek(FilePointer, 0L, SEEK_SET);
-    lengthOfFileData = sizeOfTileMap / 2;
+    lengthOfFileData = sizeOfTileMap / tileBitAmounts;
     TileData* tileMallocPointer = (TileData*)malloc(lengthOfFileData * sizeof(TileData));
     if (tileMallocPointer == NULL) {
         callEngineError("ENGINE ERROR: Couldn't allocate memory for tilemap reading!\n");
@@ -124,7 +137,7 @@ TileData* createTileMap(int* lengthOfTileMap) {
     TileData TileProps;
     while (lengthOfFileData != tileIndex) {
         fread(&tileDataBuffer, sizeof(uint8_t), 1, FilePointer);
-        tileMallocPointer[tileIndex].TileID = tileDataBuffer;
+        tileMallocPointer[tileIndex].TileID = tileDataBuffer; // eventually swash fread warnings
         fread(&layerDataBuffer, sizeof(uint8_t), 1, FilePointer);
         tileMallocPointer[tileIndex].Layer = layerDataBuffer;
         countOfMapTiles++;
@@ -147,9 +160,19 @@ Engine EngineStart() { // Returns engine object for interacting with the window 
 int main() {
     printf("ENGINE: Starting..\n");
     Engine engine = EngineStart(); // grabbing SDL props
+    Camera camera; // after we know we inited we get camera
     Player player = {0};
-    player.playerX = 10;
-    player.playerY = 10;
+    player.x = 32;
+    player.y = 32;
+    camera.x = player.x;
+    camera.y = player.y;
+    camera.zoom = 1;
+    if (camera.zoom == 0 || camera.zoom < 0) {
+        camera.zoom = 1; // Make sure camera.zoom doesn't become zero, creates SDL errors
+    }
+    //camera.zoom = 2.0; testing zoom
+    printf("Camera X: %d", camera.x);
+    printf("Camera Y: %d", camera.y);
     TileData* mapTiles = createTileMap(&countOfMapTiles);
     createEntity(1, 100, 32, 32);
     printTileMap(mapTiles, countOfMapTiles);
@@ -201,31 +224,44 @@ int main() {
             player.velX *= scale;
             player.velY *= scale;
         }
-        SDL_Rect physicalPlayerCoords = {player.playerX, player.playerY, 16, 32};
+        SDL_Rect physicalPlayerCoords = {(player.x - camera.x) * camera.zoom, (player.y - camera.y) * camera.zoom, 16, 32};
         player.velX += playerDirX * playerAcceleration * delta;
         player.velY += playerDirY * playerAcceleration * delta;
-        player.playerX += player.velX * delta;
-        player.playerY += player.velY * delta;
+        float newPlayerX = player.x + player.velX * delta;
+        if (!touchingSolidTile(mapTiles, newPlayerX, player.y)) {
+            player.x = newPlayerX;
+        } else {
+            player.velX = 0; // No velocity for you!
+        }
+        float newPlayerY = player.y + player.velY * delta;
+        if (!touchingSolidTile(mapTiles, newPlayerY, player.x)) {
+            player.y = newPlayerY;
+        } else {
+            player.velY = 0;
+        }
+        camera.x = player.x - (640 / 4) / camera.zoom;
+        camera.y = player.y - (480 / 4) / camera.zoom;
+        zoomTileSize = tileSize * camera.zoom;
         for (int i = 0; i < lengthOfFileData; i++) {
             TileData tiles = mapTiles[i];
             TileData nextTiles = mapTiles[i+1];
-            int tileX = i % 20;
-            int tileY = i / 20;
+            int tileX = i % tileWidth;
+            int tileY = i / tileWidth; // do some cleanup broadly in this section, too messy + hard to read
             SDL_Rect tileTextureCoords = {tiles.TileID * tileSize, 0, 16, 16};
-            SDL_Rect physicalTileTextureCoords = {tileX * tileSize, tileY*16, 16, 16};
+            SDL_Rect physicalTileTextureCoords = {(tileX * tileSize - camera.x) * camera.zoom, (tileY * tileSize - camera.y) * camera.zoom, zoomTileSize, zoomTileSize};
             if (tiles.TileID == 3 && nextTiles.Layer == 1) {
                 SDL_RenderCopy(engine.renderer, tilesheet, &tileTextureCoords, &physicalTileTextureCoords);
-                SDL_Rect tileTextureCoords = {nextTiles.TileID * tileSize, 0, 16, 16};
-                SDL_Rect physicalTileTextureCoords = {tileX * tileSize, tileY*16, 16, 16};
+                SDL_Rect tileTextureCoords = {nextTiles.TileID * tileSize, 0, tileSize * camera.zoom, tileSize * camera.zoom};
+                SDL_Rect physicalTileTextureCoords = {tileX * tileSize - camera.x, tileY * tileSize - camera.y, 16, 16};
                 SDL_RenderCopy(engine.renderer, tilesheet, &tileTextureCoords, &physicalTileTextureCoords);
             } else {
                 SDL_RenderCopy(engine.renderer, tilesheet, &tileTextureCoords, &physicalTileTextureCoords);
             }
         }
-        for (int i = 0; i < entityDataIndex; i += 4) {
+        for (int i = 0; i < entityDataIndex; i++) {
             Entity entity = entityData[i];
             SDL_Rect entityTextureCoords = {entity.entityID * tileSize, 16, 16, 16};
-            SDL_Rect entityPhysicalTextureCoords = {entity.x, entity.y, 16, 16};
+            SDL_Rect entityPhysicalTextureCoords = {(entity.x - camera.x) * camera.zoom, (entity.y - camera.y) * camera.zoom, 16, 16};
             SDL_RenderCopy(engine.renderer, enemytilesheet, &entityTextureCoords, &entityPhysicalTextureCoords);
         }
         SDL_RenderCopy(engine.renderer, playersheet, &playerTextureCoords, &physicalPlayerCoords);
