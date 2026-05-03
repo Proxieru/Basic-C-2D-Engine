@@ -41,6 +41,11 @@ typedef struct entityProperties {
     int data;
 } Entity;
 
+typedef struct textProperties {
+    int x, y;
+    char textContent[256];
+} Text;
+
 typedef struct playerProperties {
     float x, y; // why did I have this as playerX and y previously??
     float velX, velY;

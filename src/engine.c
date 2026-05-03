@@ -11,6 +11,7 @@
 #include "tile.h"
 #include "entity.h"
 #include "core.h"
+#include "text.h"
 
 uint8_t tileDataBuffer; // lotta variables
 uint8_t layerDataBuffer;
@@ -27,6 +28,7 @@ int tileIndex = 0;
 int tileSize = 16;
 int countOfMapTiles = 0;
 int entityDataIndex = 0;
+int textDataIndex = 0;
 int devCounterGenerate = 0; // remove later
 int controlScheme = 1; // 0 is arrow keys, 1 is wasd 
 int zoomTileSize = 0;
@@ -34,6 +36,7 @@ bool allowMove = true;
 
 
 Entity entityData[100];
+Text textData[100];
 
 void createEntity(int entityID, int health, int x, int y) {
     printf("ENGINE: Attempting to create entity...\n");
@@ -48,6 +51,20 @@ void createEntity(int entityID, int health, int x, int y) {
     entityData[entityDataIndex].y = y;
     entityDataIndex++;
     printf("ENGINE: Created new entity! Entity Index: %d\n", entityDataIndex);
+}
+
+void createText(int x, int y, const char textContent[]) {
+    printf("ENGINE: Attempting to create text...\n");
+    if (textDataIndex > 100) {
+        printf("ENGINE: Tried creating text after limit is full!\n");
+        return;
+    }
+    Text text;
+    snprintf(textData[textDataIndex].textContent,sizeof(textData[textDataIndex].textContent),"%s",textContent);
+    textData[textDataIndex].x = x;
+    textData[textDataIndex].y = y;
+    textDataIndex++;
+    printf("ENGINE: Created new text! Text Index: %d\n", textDataIndex);
 }
 
 void callEngineError(const char *error) {
@@ -152,6 +169,8 @@ int main() {
     TileData *mapTiles = NULL;
     mapTiles = loadMap(mapTiles, "maps/grass_plains.bin");
     createEntity(1, 100, 32, 32);
+    createText(1, 1, "this is text");
+    createText(90, 90, "Titlescreen");
     printTileMap(mapTiles, countOfMapTiles);
     textures.tilesheet = IMG_LoadTexture(engine.renderer, "assets/tilemap.png");
     if (textures.tilesheet == NULL) {
@@ -167,11 +186,10 @@ int main() {
     }
     SDL_Rect playerTextureCoords = {1, 1, 16, 32};
     bool isRunning = true;
-    SDL_Color color = {255, 255, 255};
-    SDL_Surface* textSurface = TTF_RenderText_Solid(engine.font, "2D Engine", color);
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(engine.renderer, textSurface);
-    SDL_Rect physicalTextCoords = { 50, 50, textSurface->w, textSurface->h };
+    const int FPS = 60;
+    const int frameDelay = 1000 / FPS;
     while (isRunning) {
+        Uint32 frameStart = SDL_GetTicks();
         SDL_SetRenderDrawColor(engine.renderer, 0, 0, 0, 255);
         SDL_RenderClear(engine.renderer);
         playerDirX = 0;
@@ -205,9 +223,13 @@ int main() {
         zoomTileSize = tileSize * camera.zoom;
         renderTiles(lengthOfFileData, mapTiles, tileWidth, tileSize, zoomTileSize, &camera, &engine, &textures);
         renderEntities(entityDataIndex, tileSize, engine, textures, entityData, &camera);
+        renderText(textDataIndex, engine, textures, textData, &camera);
         SDL_RenderCopy(engine.renderer, textures.playersheet, &playerTextureCoords, &physicalPlayerCoords);
-        SDL_RenderCopy(engine.renderer, texture, NULL, &physicalTextCoords);
         SDL_RenderPresent(engine.renderer);
+        Uint32 frameTime = SDL_GetTicks() - frameStart;
+        if (frameDelay > frameTime) {
+            SDL_Delay(frameDelay - frameTime);
+        }
             while (SDL_PollEvent(&engine.event)) {
             if (engine.event.type == SDL_QUIT) {
                 isRunning = 0;
