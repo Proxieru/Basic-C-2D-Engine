@@ -75,9 +75,9 @@ double getDeltaTime() {
     return delta;
 }
 
-TileData* createTileMap(int* lengthOfTileMap) {
+TileData* createTileMap(int* lengthOfTileMap, char filename[]) {
     enum TileType Tile = 0;
-    FILE* FilePointer = fopen("test.bin","rb"); // TODO: dynamic map loading, takes arg for it
+    FILE* FilePointer = fopen(filename,"rb"); // TODO: dynamic map loading, takes arg for it
     if (FilePointer == NULL) {
         return NULL;
     }
@@ -104,14 +104,27 @@ TileData* createTileMap(int* lengthOfTileMap) {
     return tileMallocPointer;
 }
 
+TileData* loadMap(TileData *mapTiles, char mapname[]) {
+    if (mapTiles != NULL) {
+        free(mapTiles);
+    }
+    mapTiles = createTileMap(&countOfMapTiles, mapname);
+    return mapTiles;
+}
+
+
 Engine EngineStart() { // Returns engine object for interacting with the window or renderer
-    Engine engine; 
+    Engine engine;
+    TTF_Init();
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("ENGINE ERROR: SDL Failed on start: %s\n", SDL_GetError());
     }
     engine.window = SDL_CreateWindow("2D C Engine", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN);
     engine.renderer = SDL_CreateRenderer(engine.window, -1, SDL_RENDERER_ACCELERATED);
-    engine.font = TTF_OpenFont("arial.ttf", 24);
+    engine.font = TTF_OpenFont("DejaVuSans.ttf", 24);
+    if (engine.font == NULL) {
+        callEngineError("Font failed to load\n");
+    }
     return engine; // Returning engine object so we can access SDL later
 }
 
@@ -136,23 +149,28 @@ int main() {
     //camera.zoom = 2.0; testing zoom
     printf("Camera X: %d", camera.x);
     printf("Camera Y: %d", camera.y);
-    TileData* mapTiles = createTileMap(&countOfMapTiles);
+    TileData *mapTiles = NULL;
+    mapTiles = loadMap(mapTiles, "maps/grass_plains.bin");
     createEntity(1, 100, 32, 32);
     printTileMap(mapTiles, countOfMapTiles);
-    textures.tilesheet = IMG_LoadTexture(engine.renderer, "tilemap.png");
+    textures.tilesheet = IMG_LoadTexture(engine.renderer, "assets/tilemap.png");
     if (textures.tilesheet == NULL) {
         callEngineError("ENGINE ERROR: Couldn't find tilemap texture file!");
     }
-    textures.playersheet = IMG_LoadTexture(engine.renderer, "playersheet.png");
+    textures.playersheet = IMG_LoadTexture(engine.renderer, "assets/playersheet.png");
     if (textures.playersheet == NULL) {
         callEngineError("ENGINE ERROR: Couldn't find player texture file!");
     }
-    textures.enemytilesheet = IMG_LoadTexture(engine.renderer, "enemytilesheet.png");
+    textures.enemytilesheet = IMG_LoadTexture(engine.renderer, "assets/enemytilesheet.png");
     if (textures.enemytilesheet == NULL) {
         callEngineError("ENGINE ERROR: Couldn't find enemy texture file!");
     }
     SDL_Rect playerTextureCoords = {1, 1, 16, 32};
     bool isRunning = true;
+    SDL_Color color = {255, 255, 255};
+    SDL_Surface* textSurface = TTF_RenderText_Solid(engine.font, "2D Engine", color);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(engine.renderer, textSurface);
+    SDL_Rect physicalTextCoords = { 50, 50, textSurface->w, textSurface->h };
     while (isRunning) {
         SDL_SetRenderDrawColor(engine.renderer, 0, 0, 0, 255);
         SDL_RenderClear(engine.renderer);
@@ -187,8 +205,8 @@ int main() {
         zoomTileSize = tileSize * camera.zoom;
         renderTiles(lengthOfFileData, mapTiles, tileWidth, tileSize, zoomTileSize, &camera, &engine, &textures);
         renderEntities(entityDataIndex, tileSize, engine, textures, entityData, &camera);
-        
         SDL_RenderCopy(engine.renderer, textures.playersheet, &playerTextureCoords, &physicalPlayerCoords);
+        SDL_RenderCopy(engine.renderer, texture, NULL, &physicalTextCoords);
         SDL_RenderPresent(engine.renderer);
             while (SDL_PollEvent(&engine.event)) {
             if (engine.event.type == SDL_QUIT) {
