@@ -7,4 +7,5 @@
 #include "core.h"
 
 void renderEntities(int entityDataIndex, int tileSize, Engine engine, GameAssets textures, Entity *entityData, Camera *camera);
+void handleEntity(Entity *entityData, int entityID, Player *player);
 #endif

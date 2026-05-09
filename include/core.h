@@ -38,7 +38,7 @@ typedef struct entityProperties {
     int entityID;
     int Health;
     int x, y;
-    int data;
+    char data[50];
 } Entity;
 
 typedef struct textProperties {

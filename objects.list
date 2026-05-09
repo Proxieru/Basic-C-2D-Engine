@@ -1,0 +1,24 @@
+Air:
+    type: Tile
+    0, 0, 0
+    1
+Grass:
+    type: Tile
+    66, 245, 69
+    2
+Dirt:
+    type: Tile
+    145, 77, 38
+    3
+Water:
+    type: Tile
+    38, 83, 145
+    4
+Rock:
+    type: Tile
+    89, 71, 74
+    5
+Trigger:
+    type: Entity
+    255, 9, 5
+    -1

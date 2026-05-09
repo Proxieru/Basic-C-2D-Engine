@@ -9,6 +9,7 @@
 #include "movement.h"
 #include "controls.h"
 #include "tile.h"
+#include <string.h>
 #include "entity.h"
 #include "core.h"
 #include "text.h"
@@ -29,16 +30,14 @@ int tileSize = 16;
 int countOfMapTiles = 0;
 int entityDataIndex = 0;
 int textDataIndex = 0;
-int devCounterGenerate = 0; // remove later
 int controlScheme = 1; // 0 is arrow keys, 1 is wasd 
 int zoomTileSize = 0;
 bool allowMove = true;
 
-
 Entity entityData[100];
 Text textData[100];
 
-void createEntity(int entityID, int health, int x, int y) {
+void createEntity(int entityID, int health, int x, int y, char data[50]) {
     printf("ENGINE: Attempting to create entity...\n");
     if (entityDataIndex > 100) {
         printf("ENGINE: Tried creating a entity after limit is full!\n");
@@ -49,9 +48,12 @@ void createEntity(int entityID, int health, int x, int y) {
     entityData[entityDataIndex].Health = health;
     entityData[entityDataIndex].x = x;
     entityData[entityDataIndex].y = y;
+    snprintf(entityData[entityDataIndex].data, sizeof(entityData[entityDataIndex].data), "%s", data);
     entityDataIndex++;
     printf("ENGINE: Created new entity! Entity Index: %d\n", entityDataIndex);
 }
+
+
 
 void createText(int x, int y, const char textContent[]) {
     printf("ENGINE: Attempting to create text...\n");
@@ -149,7 +151,7 @@ bool touchingSolidTile() { // dirty func for now
     return false;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     printf("ENGINE: Starting..\n");
     Engine engine = EngineStart(); // grabbing SDL props
     Camera camera; // after we know we inited we get camera
@@ -167,8 +169,14 @@ int main() {
     printf("Camera X: %d", camera.x);
     printf("Camera Y: %d", camera.y);
     TileData *mapTiles = NULL;
-    mapTiles = loadMap(mapTiles, "maps/grass_plains.bin");
-    createEntity(1, 100, 32, 32);
+    if (argc > 2 && strcmp(argv[1], "--level") == 0) {
+        mapTiles = loadMap(mapTiles, argv[2]) ;
+        printf("Loaded level from arg");
+    } else {
+        mapTiles = loadMap(mapTiles, "maps/test.bin");
+    }
+    createEntity(1, 3, 32, 32, "ACTION_CHASE");
+    createEntity(1, 3, 32, 32, "");
     createText(1, 1, "this is text");
     createText(90, 90, "Titlescreen");
     printTileMap(mapTiles, countOfMapTiles);
@@ -221,6 +229,12 @@ int main() {
         camera.x = player.x - (640 / 4) / camera.zoom;
         camera.y = player.y - (480 / 4) / camera.zoom;
         zoomTileSize = tileSize * camera.zoom;
+        for (int i = 0; i < entityDataIndex; i++) {
+            char strActionChase[] = "ACTION_CHASE";
+            if (strncmp(strActionChase, entityData[i].data, 13) == 0) {
+                handleEntity(entityData, i, &player);
+            }    
+        }
         renderTiles(lengthOfFileData, mapTiles, tileWidth, tileSize, zoomTileSize, &camera, &engine, &textures);
         renderEntities(entityDataIndex, tileSize, engine, textures, entityData, &camera);
         renderText(textDataIndex, engine, textures, textData, &camera);
