@@ -25,21 +25,24 @@ int lengthOfFileData = 0;
 int tileHeight = 0;
 int tileBitAmounts = 2;
 int tileWidth = 40;
-int tileIndex = 0; 
+int tileIndex = 0;
 int tileSize = 16;
 int countOfMapTiles = 0;
 int entityDataIndex = 0;
 int textDataIndex = 0;
-int controlScheme = 1; // 0 is arrow keys, 1 is wasd 
+int controlScheme = 1; // 0 is arrow keys, 1 is wasd
 int zoomTileSize = 0;
 bool allowMove = true;
+bool isPaused = false;
 
 Entity entityData[100];
 Text textData[100];
 
-void createEntity(int entityID, int health, int x, int y, char data[50]) {
+void createEntity(int entityID, int health, int x, int y, char data[50])
+{
     printf("ENGINE: Attempting to create entity...\n");
-    if (entityDataIndex > 100) {
+    if (entityDataIndex > 100)
+    {
         printf("ENGINE: Tried creating a entity after limit is full!\n");
         return;
     }
@@ -53,31 +56,34 @@ void createEntity(int entityID, int health, int x, int y, char data[50]) {
     printf("ENGINE: Created new entity! Entity Index: %d\n", entityDataIndex);
 }
 
-
-
-void createText(int x, int y, const char textContent[]) {
+void createText(int x, int y, const char textContent[])
+{
     printf("ENGINE: Attempting to create text...\n");
-    if (textDataIndex > 100) {
+    if (textDataIndex > 100)
+    {
         printf("ENGINE: Tried creating text after limit is full!\n");
         return;
     }
     Text text;
-    snprintf(textData[textDataIndex].textContent,sizeof(textData[textDataIndex].textContent),"%s",textContent);
+    snprintf(textData[textDataIndex].textContent, sizeof(textData[textDataIndex].textContent), "%s", textContent);
     textData[textDataIndex].x = x;
     textData[textDataIndex].y = y;
     textDataIndex++;
     printf("ENGINE: Created new text! Text Index: %d\n", textDataIndex);
 }
 
-void callEngineError(const char *error) {
-        fprintf(stderr, "%s\n", error);
-        fflush(stderr);
-        SDL_Quit(); // Forgot to make engine exit on error, whoops!
-        exit(1);
+void callEngineError(const char *error)
+{
+    fprintf(stderr, "%s\n", error);
+    fflush(stderr);
+    SDL_Quit(); // Forgot to make engine exit on error, whoops!
+    exit(1);
 }
 
-void printTileMap(TileData* map, int length) { // Debug, delete later
-    for (int i = 0; i < length; i++) {
+void printTileMap(TileData *map, int length)
+{ // Debug, delete later
+    for (int i = 0; i < length; i++)
+    {
         printf("Tile %d: ID=%d Layer=%d\n",
                i,
                map[i].TileID,
@@ -85,7 +91,8 @@ void printTileMap(TileData* map, int length) { // Debug, delete later
     }
 }
 
-double getDeltaTime() {
+double getDeltaTime()
+{
     static Uint64 last = 0;
     Uint64 now = SDL_GetPerformanceCounter();
     Uint64 freq = SDL_GetPerformanceFrequency();
@@ -94,24 +101,28 @@ double getDeltaTime() {
     return delta;
 }
 
-TileData* createTileMap(int* lengthOfTileMap, char filename[]) {
+TileData *createTileMap(int *lengthOfTileMap, char filename[])
+{
     enum TileType Tile = 0;
-    FILE* FilePointer = fopen(filename,"rb"); // TODO: dynamic map loading, takes arg for it
-    if (FilePointer == NULL) {
+    FILE *FilePointer = fopen(filename, "rb"); // TODO: dynamic map loading, takes arg for it
+    if (FilePointer == NULL)
+    {
         return NULL;
     }
     fseek(FilePointer, 0L, SEEK_END);
     int sizeOfTileMap = ftell(FilePointer); // grabbing file size
     fseek(FilePointer, 0L, SEEK_SET);
     lengthOfFileData = sizeOfTileMap / tileBitAmounts;
-    TileData* tileMallocPointer = (TileData*)malloc(lengthOfFileData * sizeof(TileData));
-    if (tileMallocPointer == NULL) {
+    TileData *tileMallocPointer = (TileData *)malloc(lengthOfFileData * sizeof(TileData));
+    if (tileMallocPointer == NULL)
+    {
         callEngineError("ENGINE ERROR: Couldn't allocate memory for tilemap reading!\n");
         fclose(FilePointer);
         return NULL;
     }
     TileData TileProps;
-    while (lengthOfFileData != tileIndex) {
+    while (lengthOfFileData != tileIndex)
+    {
         fread(&tileDataBuffer, sizeof(uint8_t), 1, FilePointer);
         tileMallocPointer[tileIndex].TileID = tileDataBuffer; // eventually sqash fread warnings
         fread(&layerDataBuffer, sizeof(uint8_t), 1, FilePointer);
@@ -123,38 +134,44 @@ TileData* createTileMap(int* lengthOfTileMap, char filename[]) {
     return tileMallocPointer;
 }
 
-TileData* loadMap(TileData *mapTiles, char mapname[]) {
-    if (mapTiles != NULL) {
+TileData *loadMap(TileData *mapTiles, char mapname[])
+{
+    if (mapTiles != NULL)
+    {
         free(mapTiles);
     }
     mapTiles = createTileMap(&countOfMapTiles, mapname);
     return mapTiles;
 }
 
-
-Engine EngineStart() { // Returns engine object for interacting with the window or renderer
+Engine EngineStart()
+{ // Returns engine object for interacting with the window or renderer
     Engine engine;
     TTF_Init();
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    {
         printf("ENGINE ERROR: SDL Failed on start: %s\n", SDL_GetError());
     }
     engine.window = SDL_CreateWindow("2D C Engine", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN);
     engine.renderer = SDL_CreateRenderer(engine.window, -1, SDL_RENDERER_ACCELERATED);
     engine.font = TTF_OpenFont("DejaVuSans.ttf", 24);
-    if (engine.font == NULL) {
+    if (engine.font == NULL)
+    {
         callEngineError("Font failed to load\n");
     }
     return engine; // Returning engine object so we can access SDL later
 }
 
-bool touchingSolidTile() { // dirty func for now
+bool touchingSolidTile()
+{ // dirty func for now
     return false;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     printf("ENGINE: Starting..\n");
     Engine engine = EngineStart(); // grabbing SDL props
-    Camera camera; // after we know we inited we get camera
+    Camera camera;                 // after we know we inited we get camera
     Player player = {0};
     GameAssets textures;
     player.x = 32;
@@ -162,41 +179,47 @@ int main(int argc, char *argv[]) {
     camera.x = player.x;
     camera.y = player.y;
     camera.zoom = 1;
-    if (camera.zoom == 0 || camera.zoom < 0) {
+    if (camera.zoom == 0 || camera.zoom < 0)
+    {
         camera.zoom = 1; // Make sure camera.zoom doesn't become zero, creates SDL errors
     }
-    //camera.zoom = 2.0; testing zoom
+    // camera.zoom = 2.0; testing zoom
     printf("Camera X: %d", camera.x);
     printf("Camera Y: %d", camera.y);
     TileData *mapTiles = NULL;
-    if (argc > 2 && strcmp(argv[1], "--level") == 0) {
-        mapTiles = loadMap(mapTiles, argv[2]) ;
+    if (argc > 2 && strcmp(argv[1], "--level") == 0)
+    {
+        mapTiles = loadMap(mapTiles, argv[2]);
         printf("Loaded level from arg");
-    } else {
+    }
+    else
+    {
         mapTiles = loadMap(mapTiles, "maps/test.bin");
     }
     createEntity(1, 3, 32, 32, "ACTION_CHASE");
     createEntity(1, 3, 32, 32, "");
-    createText(1, 1, "this is text");
-    createText(90, 90, "Titlescreen");
     printTileMap(mapTiles, countOfMapTiles);
     textures.tilesheet = IMG_LoadTexture(engine.renderer, "assets/tilemap.png");
-    if (textures.tilesheet == NULL) {
+    if (textures.tilesheet == NULL)
+    {
         callEngineError("ENGINE ERROR: Couldn't find tilemap texture file!");
     }
     textures.playersheet = IMG_LoadTexture(engine.renderer, "assets/playersheet.png");
-    if (textures.playersheet == NULL) {
+    if (textures.playersheet == NULL)
+    {
         callEngineError("ENGINE ERROR: Couldn't find player texture file!");
     }
     textures.enemytilesheet = IMG_LoadTexture(engine.renderer, "assets/enemytilesheet.png");
-    if (textures.enemytilesheet == NULL) {
+    if (textures.enemytilesheet == NULL)
+    {
         callEngineError("ENGINE ERROR: Couldn't find enemy texture file!");
     }
     SDL_Rect playerTextureCoords = {1, 1, 16, 32};
     bool isRunning = true;
     const int FPS = 60;
     const int frameDelay = 1000 / FPS;
-    while (isRunning) {
+    while (isRunning)
+    {
         Uint32 frameStart = SDL_GetTicks();
         SDL_SetRenderDrawColor(engine.renderer, 0, 0, 0, 255);
         SDL_RenderClear(engine.renderer);
@@ -204,10 +227,12 @@ int main(int argc, char *argv[]) {
         playerDirY = 0;
         double delta = getDeltaTime();
         const Uint8 *keyboardState = SDL_GetKeyboardState(NULL);
-        if (controlScheme == 0) {
+        if (controlScheme == 0 && !isPaused)
+        {
             handleArrowControls(keyboardState, &playerDirY, &playerDirX);
         }
-        if (controlScheme == 1) {
+        if (controlScheme == 1 && !isPaused)
+        {
             handleWasdControls(keyboardState, &playerDirY, &playerDirX);
         }
         float speed = applyPlayerFriction(playerDirX, playerDirY, playerFriction, delta, &player);
@@ -215,25 +240,33 @@ int main(int argc, char *argv[]) {
         SDL_Rect physicalPlayerCoords = {(player.x - camera.x) * camera.zoom, (player.y - camera.y) * camera.zoom, 16, 32};
         applyPlayerVelocity(&player, playerDirX, playerDirY, delta, playerAcceleration);
         float newPlayerX = player.x + player.velX * delta;
-        if (!touchingSolidTile(mapTiles, newPlayerX, player.y)) {
+        if (!touchingSolidTile(mapTiles, newPlayerX, player.y))
+        {
             player.x = newPlayerX;
-        } else {
+        }
+        else
+        {
             player.velX = 0; // No velocity for you!
         }
         float newPlayerY = player.y + player.velY * delta;
-        if (!touchingSolidTile(mapTiles, newPlayerY, player.x)) {
+        if (!touchingSolidTile(mapTiles, newPlayerY, player.x))
+        {
             player.y = newPlayerY;
-        } else {
+        }
+        else
+        {
             player.velY = 0;
         }
         camera.x = player.x - (640 / 4) / camera.zoom;
         camera.y = player.y - (480 / 4) / camera.zoom;
         zoomTileSize = tileSize * camera.zoom;
-        for (int i = 0; i < entityDataIndex; i++) {
+        for (int i = 0; i < entityDataIndex; i++)
+        {
             char strActionChase[] = "ACTION_CHASE";
-            if (strncmp(strActionChase, entityData[i].data, 13) == 0) {
+            if (strncmp(strActionChase, entityData[i].data, 13) == 0)
+            {
                 handleEntity(entityData, i, &player);
-            }    
+            }
         }
         renderTiles(lengthOfFileData, mapTiles, tileWidth, tileSize, zoomTileSize, &camera, &engine, &textures);
         renderEntities(entityDataIndex, tileSize, engine, textures, entityData, &camera);
@@ -241,14 +274,37 @@ int main(int argc, char *argv[]) {
         SDL_RenderCopy(engine.renderer, textures.playersheet, &playerTextureCoords, &physicalPlayerCoords);
         SDL_RenderPresent(engine.renderer);
         Uint32 frameTime = SDL_GetTicks() - frameStart;
-        if (frameDelay > frameTime) {
+        if (frameDelay > frameTime)
+        {
             SDL_Delay(frameDelay - frameTime);
         }
-            while (SDL_PollEvent(&engine.event)) {
-            if (engine.event.type == SDL_QUIT) {
-                isRunning = 0;
+        while (SDL_PollEvent(&engine.event))
+        {
+
+            if (engine.event.type == SDL_KEYDOWN &&
+                engine.event.key.keysym.scancode == SDL_SCANCODE_ESCAPE &&
+                !engine.event.key.repeat)
+            {
+                isPaused = !isPaused; // toggle pause
+            }
+
+            if (engine.event.type == SDL_QUIT)
+            {
+                isRunning = false;
                 printf("ENGINE: Shutting down..\n");
-                }
             }
         }
+        if (isPaused)
+        {
+            if (textDataIndex == 0)
+            {
+                createText(90, 60, "Made by ru040076");
+                createText(90, 90, "Nickel Engine");
+            }
+        }
+        else
+        {
+            textDataIndex = 0;
+        }
+    }
 }

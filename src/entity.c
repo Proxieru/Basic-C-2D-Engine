@@ -10,8 +10,8 @@ void handleEntity(Entity *entityData, int entityID, Player *player) {
         return;
     }
     int entityHealth = entityData[entityID].Health;
-    int moveAmountX = player->x - 3;
-    int moveAmountY = player->y - 3;
+    int moveAmountX = player->x - 15;
+    int moveAmountY = player->y - 15;
     entityData[entityID].x = moveAmountX;
     entityData[entityID].y = moveAmountY;
 }

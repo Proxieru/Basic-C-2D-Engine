@@ -4,4 +4,5 @@
 #include "core.h"
 
 void renderText(int textDataIndex, Engine engine, GameAssets textures, Text *textData, Camera *camera);
+int deleteText(int textDataIndex, Text *textData);
 #endif
